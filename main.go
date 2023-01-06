@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"todo/initializers"
 
 	"github.com/gin-gonic/gin"
@@ -8,6 +9,11 @@ import (
 
 func main() {
 	router := gin.Default()
-	initializers.InitRoutes(router)
-	router.Run("localhost:9090")
+
+	initializers.LoadEnvVariables()
+	initializers.InitRoutes(router) 
+
+	port := os.Getenv("PORT")
+	
+	router.Run("localhost:" + port)
 }
