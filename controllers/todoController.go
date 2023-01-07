@@ -1,56 +1,52 @@
 package controllers
 
 import (
+	"fmt"
+	"math/rand"
 	"net/http"
+	"todo/db"
+	"todo/models"
+	"todo/types"
 
 	"github.com/gin-gonic/gin"
 )
 
-type Todo struct {
-	ID          string    `json:"id"`
-	Title       string `json:"title"`
-	Completed   bool   `json:"complete"`
-	TimeCreated string `json:"time_created"`
-}
-
-var todos = [] Todo {
-	{ID: "1", Title: "First Todo", Completed: false, TimeCreated: "2019-01-01"},
-	{ID: "2", Title: "Second Todo", Completed: false, TimeCreated: "2019-01-01"},
-	{ID: "3", Title: "Third Todo", Completed: false, TimeCreated: "2019-01-01"},
-	{ID: "4", Title: "Fourth Todo", Completed: false, TimeCreated: "2019-01-01"},
-}
 
 func GetTodos(context *gin.Context) {
+	var todos []types.Todo
+	db.DB.Find(&todos)
 	context.IndentedJSON(http.StatusOK, todos)
 }
 
+
 func GetTodo(context *gin.Context) {
 	id := context.Param("id")
-	for _, todo := range todos {
-		if todo.ID == id {
-			context.IndentedJSON(http.StatusOK, todo)
-			return
-		}
-	}
-	context.IndentedJSON(http.StatusNotFound, gin.H{"message": "todo not found"})
+	var todo types.Todo
+	db.DB.First(&todo, id)
+	context.IndentedJSON(http.StatusOK, todo)
 }
 
 func AddTodo(context *gin.Context) {
-	var newTodo Todo
-	if err := context.BindJSON(&newTodo); err != nil {
+	var newTodo models.Todo
+	if err := context.ShouldBindJSON(&newTodo); err != nil {
+		context.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	todos = append(todos, newTodo)
+	// Generate a 12-digit random number and set it as the id field
+	newTodo.ID = fmt.Sprintf("%012d", rand.Intn(100000000000))
+
+	db.DB.Create(&newTodo)
 	context.IndentedJSON(http.StatusCreated, newTodo)
 }
 
 func DeleteTodo(context *gin.Context) {
 	id := context.Param("id")
-	for index, todo := range todos {
-		if todo.ID == id {
-			todos = append(todos[:index], todos[index+1:]...)
-			context.IndentedJSON(http.StatusOK, gin.H{"message": "todo deleted"})
-		}
+	var todo types.Todo
+	db.DB.First(&todo, id)
+	if todo.ID == "" {
+		context.JSON(http.StatusNotFound, gin.H{"error": "Todo not found"})
+		return
 	}
-	context.IndentedJSON(http.StatusNotFound, gin.H{"message": "todo not found"})
+	db.DB.Delete(&todo)
+	context.JSON(http.StatusOK, gin.H{"data": true})
 }
