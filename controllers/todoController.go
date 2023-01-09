@@ -39,6 +39,24 @@ func AddTodo(context *gin.Context) {
 	context.IndentedJSON(http.StatusCreated, newTodo)
 }
 
+func UpdateTodo(context *gin.Context) {
+	id := context.Param("id")
+	var todo types.Todo
+	db.DB.First(&todo, id)
+	if todo.ID == "" {
+		context.JSON(http.StatusNotFound, gin.H{"error": "Todo not found"})
+		return
+	}
+	var updatedTodo models.Todo
+	if err := context.ShouldBindJSON(&updatedTodo); err != nil {
+		context.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	updatedTodo.ID = todo.ID
+	db.DB.Save(&updatedTodo)
+	context.JSON(http.StatusOK, gin.H{"data": updatedTodo})
+}
+
 func DeleteTodo(context *gin.Context) {
 	id := context.Param("id")
 	var todo types.Todo
